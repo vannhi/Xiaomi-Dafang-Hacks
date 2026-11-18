@@ -44,7 +44,7 @@ init_gpio(){
 # Read a value from a gpio pin
 getgpio(){
   GPIOPIN=$1
-  cat /sys/class/gpio/gpio"$GPIOPIN"/value
+  read -r gpio_value < /sys/class/gpio/gpio"$GPIOPIN"/value && echo "$gpio_value"
 }
 
 # Write a value to gpio pin
@@ -59,6 +59,20 @@ get_config(){
   cfg_path=$1
   cfg_key=$2
   grep -v '^[[:space:]]*#' "$1"  | grep "$2" | cut -d "=" -f2
+}
+
+# Print ON if a key of motion.conf is "true", OFF otherwise
+# Uses shell builtins only since the web UI polls these statuses
+motion_config_status(){
+  cfg_path=/system/sdcard/config/motion.conf
+  [ -r "$cfg_path" ] || { echo "OFF"; return; }
+  while IFS='=' read -r cfg_key cfg_value || [ -n "$cfg_key" ]; do
+    if [ "$cfg_key" = "$1" ]; then
+      [ "$cfg_value" = "true" ] && echo "ON" || echo "OFF"
+      return
+    fi
+  done < "$cfg_path"
+  echo "OFF"
 }
 
 # Replace the old value of a config_key at the cfg_path with new_value
@@ -88,7 +102,7 @@ blue_led(){
 	setgpio 39 1
 	;;
   status)
-	status=$(getgpio 39)
+	read -r status < /sys/class/gpio/gpio39/value || status=
 	case $status in
 	  0)
 		echo "ON"
@@ -110,7 +124,7 @@ yellow_led(){
 	setgpio 38 1
 	;;
   status)
-	status=$(getgpio 38)
+	read -r status < /sys/class/gpio/gpio38/value || status=
 	case $status in
 	  0)
 		echo "ON"
@@ -132,7 +146,7 @@ ir_led(){
 	setgpio 49 1
 	;;
   status)
-	status=$(getgpio 49)
+	read -r status < /sys/class/gpio/gpio49/value || status=
 	case $status in
 	  0)
 		echo "ON"
@@ -162,7 +176,7 @@ ir_cut(){
 	echo "0" > /var/run/ircut
 	;;
   status)
-	status=$(cat /var/run/ircut)
+	read -r status < /var/run/ircut || status=
 	case $status in
 	  1)
 		echo "ON"
@@ -494,15 +508,7 @@ motion_led(){
 	rewrite_config /system/sdcard/config/motion.conf motion_trigger_led "false"
 	;;
   status)
-	status=$(grep '^[^#;]' /system/sdcard/config/motion.conf|grep 'motion_trigger_led'|cut -f2 -d \=)
-	case $status in
-	  true)
-		echo "ON"
-		;;
-	  false)
-		echo "OFF"
-		;;
-	esac
+	motion_config_status motion_trigger_led
   esac
 }
 
@@ -516,15 +522,7 @@ motion_send_mail(){
 	rewrite_config /system/sdcard/config/motion.conf send_email "false"
 	;;
   status)
-	status=$(grep '^[^#;]' /system/sdcard/config/motion.conf|grep 'send_email'|cut -f2 -d \=)
-	case $status in
-	  false)
-		echo "OFF"
-		;;
-	  true)
-		echo "ON"
-		;;
-	esac
+	motion_config_status send_email
   esac
 }
 
@@ -558,15 +556,7 @@ motion_send_telegram(){
 	rewrite_config /system/sdcard/config/motion.conf send_telegram "false"
 	;;
   status)
-	status=$(grep '^[^#;]' /system/sdcard/config/motion.conf|grep 'send_telegram'|cut -f2 -d \=)
-	case $status in
-	  true)
-		echo "ON"
-		;;
-	  *)
-		echo "OFF"
-		;;
-	esac
+	motion_config_status send_telegram
   esac
 }
 
@@ -580,15 +570,7 @@ motion_snapshot(){
 	rewrite_config /system/sdcard/config/motion.conf save_snapshot "false"
 	;;
   status)
-	status=$(grep '^[^#;]' /system/sdcard/config/motion.conf|grep 'save_snapshot[^_]'|cut -f2 -d \=)
-	case $status in
-	  false)
-		echo "OFF"
-		;;
-	  true)
-		echo "ON"
-		;;
-	esac
+	motion_config_status save_snapshot
   esac
 }
 
@@ -602,15 +584,7 @@ motion_video(){
 	rewrite_config /system/sdcard/config/motion.conf save_video "false"
 	;;
   status)
-	status=$(grep '^[^#;]' /system/sdcard/config/motion.conf|grep 'save_video[^_]'|cut -f2 -d \=)
-	case $status in
-	  true)
-		echo "ON"
-		;;
-	  false)
-		echo "OFF"
-		;;
-	esac
+	motion_config_status save_video
   esac
 }
 
@@ -646,15 +620,7 @@ motion_mqtt_publish(){
 	rewrite_config /system/sdcard/config/motion.conf publish_mqtt_message "false"
 	;;
   status)
-	status=$(grep '^[^#;]' /system/sdcard/config/motion.conf|grep 'publish_mqtt_message'|cut -f2 -d \=)
-	case $status in
-	  true)
-		echo "ON"
-		;;
-	  false)
-		echo "OFF"
-		;;
-	esac
+	motion_config_status publish_mqtt_message
   esac
 }
 
@@ -668,15 +634,7 @@ motion_mqtt_snapshot(){
 	rewrite_config /system/sdcard/config/motion.conf publish_mqtt_snapshot "false"
 	;;
   status)
-	status=$(grep '^[^#;]' /system/sdcard/config/motion.conf|grep 'publish_mqtt_snapshot'|cut -f2 -d \=)
-	case $status in
-	  true)
-		echo "ON"
-		;;
-	  false)
-		echo "OFF"
-		;;
-	esac
+	motion_config_status publish_mqtt_snapshot
   esac
 }
 
@@ -690,15 +648,7 @@ motion_mqtt_video(){
 	rewrite_config /system/sdcard/config/motion.conf publish_mqtt_video "false"
 	;;
   status)
-	status=$(grep '^[^#;]' /system/sdcard/config/motion.conf|grep 'publish_mqtt_video'|cut -f2 -d \=)
-	case $status in
-	  true)
-		echo "ON"
-		;;
-	  false)
-		echo "OFF"
-		;;
-	esac
+	motion_config_status publish_mqtt_video
   esac
 }
 
@@ -801,25 +751,6 @@ github_curl() {
 	else
 		/system/sdcard/bin/curl "$@"
 	fi
-}
-
-# Check commit between VERSION file and github
-check_commit() {
-  if [ -s /system/sdcard/VERSION ]; then
-	localrepo=$(/system/sdcard/bin/jq -r .repo /system/sdcard/VERSION)
-	if [ -z "$localrepo" ]; then localrepo="EliasKotlyar"; fi
-	localcommit=$(/system/sdcard/bin/jq -r .commit /system/sdcard/VERSION)
-	localbranch=$(/system/sdcard/bin/jq -r .branch /system/sdcard/VERSION)
-	remotecommit=$(github_curl -s https://api.github.com/repos/${localrepo}/commits/${localbranch} | /system/sdcard/bin/jq -r '.sha[0:7]')
-	if [ ${localcommit} = ${remotecommit} ]; then
-	 echo "${localcommit} ( No update available)"
-	else
-	 commitbehind=$(github_curl -s https://api.github.com/repos/${localrepo}/compare/${remotecommit}...${localcommit} | /system/sdcard/bin/jq -r '.behind_by')
-	 echo "${localcommit} ( ${commitbehind} commits behind Github)"
-	fi
-  else
-	echo "No version file"
-  fi
 }
 
 #Get list of font files

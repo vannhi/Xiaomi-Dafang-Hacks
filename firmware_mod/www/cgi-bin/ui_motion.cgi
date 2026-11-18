@@ -6,7 +6,7 @@
 export LD_LIBRARY_PATH=/system/lib
 export LD_LIBRARY_PATH=/thirdlib:$LD_LIBRARY_PATH
 
-echo "Content-type: text"
+echo "Content-type: text/plain"
 echo "Pragma: no-cache"
 echo "Cache-Control: max-age=0, no-store, no-cache"
 echo ""

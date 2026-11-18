@@ -3,7 +3,7 @@ source ./func.cgi
 source /system/sdcard/scripts/common_functions.sh
 
 
-echo "Content-type: text"
+echo "Content-type: text/plain"
 echo "Pragma: no-cache"
 echo "Cache-Control: max-age=0, no-store, no-cache"
 echo ""
@@ -27,7 +27,7 @@ if [ -n "$F_cmd" ]; then
 	  ;;
   getFiles)
     if [[ -d /system/sdcard/DCIM/${F_dir} ]]; then
-        find /system/sdcard/DCIM/${F_dir}/ -type f | xargs ls -lh
+        find /system/sdcard/DCIM/${F_dir}/ -type f | xargs -r ls -lh
     fi
     ;;
   sdcardInfo)
@@ -39,6 +39,18 @@ if [ -n "$F_cmd" ]; then
     F_file=$(echo ${F_file} | sed -e 's/%2F/\//g' | sed -e 's/viewer/\/system\/sdcard\/DCIM/') 
     echo "Remove ${F_file}"
     rm $F_file
+    ;;
+  del_files)
+    # F_files: comma separated list of /viewer/... paths (URL encoded)
+    set -f
+    for f in $(echo "${F_files}" | sed -e 's/%2F/\//g' -e 's/%2C/ /g'); do
+      f="/system/sdcard/DCIM${f#/viewer}"
+      case "$f" in
+        *..*) echo "Refused ${f}" ;;
+        *) rm -f "$f" && echo "Removed ${f}" ;;
+      esac
+    done
+    set +f
     ;;
   *)
     echo "Unsupported command '$F_cmd'"

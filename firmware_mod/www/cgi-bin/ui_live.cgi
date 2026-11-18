@@ -8,7 +8,7 @@
 export LD_LIBRARY_PATH=/system/lib
 export LD_LIBRARY_PATH=/thirdlib:$LD_LIBRARY_PATH
 
-echo "Content-type: text"
+echo "Content-type: text/plain"
 echo "Pragma: no-cache"
 echo "Cache-Control: max-age=0, no-store, no-cache"
 echo ""
@@ -28,7 +28,7 @@ if [ -n "$F_cmd" ]; then
     echo "motion_led:$(motion_led status)"
     echo "motion_snapshot:$(motion_snapshot status)"
     echo "motion_mqtt:$(motion_mqtt_publish status)"
-    echo "motion_mqtt_snapshot:$(motion_snapshot status)"
+    echo "motion_mqtt_snapshot:$(motion_mqtt_snapshot status)"
     echo "motion_mqtt_video:$(motion_mqtt_video status)"
     ;;
   
